@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Compteurs Électriques / Factures Electronique</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f4f8;
+        }
+        
+        .receipt {
+            background: linear-gradient(to bottom, #ffffff, #f8fafc);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .receipt::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+        }
+        
+        .highlight {
+            background-color: #e6f7ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .btn-download {
+            transition: all 0.3s ease;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+        }
+        
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .input-field {
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Gestion des Compteurs Électriques</h1>
+            <p class="text-gray-600">Calculez facilement la consommation électrique et générez des factures</p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Saisie des données</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="oldKw" class="block text-sm font-medium text-gray-700 mb-1">Ancien relevé (kW)</label>
+                    <input type="number" step="0.1" id="oldKw" class="w-full px-4 py-2 rounded-lg input-field focus:outline-none" placeholder="Ex: 112.5">
+                </div>
+
+                <div>
+                    <label for="newKw" class="block text-sm font-medium text-gray-700 mb-1">Nouveau relevé (kW)</label>
+                    <input type="number" step="0.1" id="newKw" class="w-full px-4 py-2 rounded-lg input-field focus:outline-none" placeholder="Ex: 235.2">
+                </div>
+
+                <div>
+                    <label for="clientName" class="block text-sm font-medium text-gray-700 mb-1">Nom du client</label>
+                    <input type="text" id="clientName" class="w-full px-4 py-2 rounded-lg input-field focus:outline-none" placeholder="Ex: M. Diallo">
+                </div>
+
+                <div>
+                    <label for="clientAddress" class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                    <input type="text" id="clientAddress" class="w-full px-4 py-2 rounded-lg input-field focus:outline-none" placeholder="Ex: Rue 12, Quartier XYZ">
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-center">
+                <button type="button" onclick="calculate()" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg btn-download hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Calculer la consommation
+                </button>
+            </div>
+        </div>
+
+        <div id="resultSection" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Résultat du calcul</h2>
+                <button type="button" onclick="downloadReceipt()" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg btn-download flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Télécharger la facture
+                </button>
+            </div>
+
+            <div id="receipt" class="receipt p-6 mb-8">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">FACTURE D'ÉLECTRICITÉ</h2>
+                    <p class="text-gray-500 text-sm">Date: <span id="currentDate"></span></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <h3 class="font-medium text-gray-700">Fournisseur:</h3>
+                        <p class="text-gray-800">Gestion Électrique Familiale</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium text-gray-700">Client:</h3>
+                        <p id="receiptClientName" class="text-gray-800">-</p>
+                        <p id="receiptClientAddress" class="text-gray-600 text-sm">-</p>
+                    </div>
+                </div>
+
+                <div class="border-t border-b border-gray-200 py-4 my-4">
+                    <div class="grid grid-cols-3 gap-4 font-medium text-gray-700 mb-2">
+                        <div>Désignation</div>
+                        <div class="text-right">Consommation</div>
+                        <div class="text-right">Montant</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 py-3 px-2 highlight">
+                        <div>Consommation électrique</div>
+                        <div id="consumptionKw" class="text-right">- kW</div>
+                        <div id="totalAmount" class="text-right font-semibold">- F CFA</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mt-6">
+                    <div class="text-sm text-gray-500">
+                        <p>Prix unitaire: 300 F CFA par kW</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">Total à payer</p>
+                        <p id="grandTotal" class="text-2xl font-bold text-blue-600">- F CFA</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
+                    <p>Merci pour votre confiance. Paiement à effectuer dans les 10 jours.</p>
+                    <p class="mt-1">Pour toute question, contactez le gestionnaire.</p>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h3 class="font-medium text-blue-800 mb-2">Détail du calcul:</h3>
+                <p class="text-sm text-gray-700">
+                    <span id="calculationDetail"></span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const oldKw = parseFloat(document.getElementById('oldKw').value);
+            const newKw = parseFloat(document.getElementById('newKw').value);
+            const clientName = document.getElementById('clientName').value;
+            const clientAddress = document.getElementById('clientAddress').value;
+            
+            if (isNaN(oldKw) || isNaN(newKw) || newKw <= oldKw) {
+                alert("Veuillez entrer des valeurs valides (Nouveau kW doit être supérieur à Ancien kW)");
+                return;
+            }
+            
+            const consumption = newKw - oldKw;
+            const amount = consumption * 300;
+            
+            // Formatage avec 2 décimales
+            const formattedConsumption = consumption.toFixed(1);
+            const formattedAmount = amount.toFixed(0);
+            
+            // Mise à jour de l'interface
+            document.getElementById('consumptionKw').textContent = `${formattedConsumption} kW`;
+            document.getElementById('totalAmount').textContent = `${formattedAmount} F CFA`;
+            document.getElementById('grandTotal').textContent = `${formattedAmount} F CFA`;
+            document.getElementById('receiptClientName').textContent = clientName || "Non spécifié";
+            document.getElementById('receiptClientAddress').textContent = clientAddress || "Non spécifié";
+            
+            // Détail du calcul
+            document.getElementById('calculationDetail').innerHTML = `
+                Nouveau kW (${newKw}) - Ancien kW (${oldKw}) = ${formattedConsumption} kW<br>
+                ${formattedConsumption} kW × 300 F CFA = <strong>${formattedAmount} F CFA</strong>
+            `;
+            
+            // Date actuelle
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            document.getElementById('currentDate').textContent = today.toLocaleDateString('fr-FR', options);
+            
+            // Afficher la section résultat
+            document.getElementById('resultSection').classList.remove('hidden');
+            
+            // Faire défiler jusqu'au résultat
+            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function downloadReceipt() {
+            const receiptElement = document.getElementById('receipt');
+            
+            html2canvas(receiptElement, {
+                scale: 2,
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Facture-Electricite-${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
